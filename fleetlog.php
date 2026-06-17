@@ -1,4 +1,24 @@
 <?php
+$logFile = "fleetlog.txt";
+
+$driver = $_POST['driver'] ?? 'Unknown';
+$action = $_POST['action'] ?? 'None';
+$amount = $_POST['amount'] ?? '0';
+$cargo = $_POST['cargo'] ?? 'None';
+$slurl = $_POST['slurl'] ?? 'Unknown';
+
+$entry = date("Y-m-d H:i:s")
+       . " | Driver: $driver"
+       . " | Action: $action"
+       . " | Amount: $amount"
+       . " | Cargo: $cargo"
+       . " | SLURL: $slurl\n";
+
+file_put_contents($logFile, $entry, FILE_APPEND);
+
+echo "Logged: $entry";
+?>
+<?php
 // fleetlog.php
 $logFile = "fleetlog.txt";
 
