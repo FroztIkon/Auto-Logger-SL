@@ -1,5 +1,6 @@
 # Auto-Logger-SL
-This is meant as a GTFO logger that reports to a endpoint server. Requires drivers to input Cargo then Destination. The LSL auto populates Timestamp, user legacy name, region, and coordinates.
+This is meant as a GTFO logger that reports to a endpoint server. Drivers used to have to input the Destination and the Cargo. Now we're listening for GTFO hud announcements and using them as a trigger to send the data. It outputs into a table:  
+Timestamp	Driver	Action	Amount	Cargo	Current Location. Current Location is a SLURL to go to that point.
 
 Currently known channels  
 -9600 : Shows Pick up or Delivery message in the format: legacy name picks up # of cargo or legacy name unloaded # of cargo
