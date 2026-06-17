@@ -1,6 +1,7 @@
 // Replace with your fleet group UUID
 key FLEET_GROUP = "xxxxx-xxxxxxx-xxxxxxx-xxxxxx";  
 string SERVER_URL = "https://yourserver.com/fleetlog.php"; // replace with your endpoint
+
 integer GTFO_CHANNEL = -9600; // GTFO HUD speaks here
 
 default
@@ -16,6 +17,7 @@ default
         if (channel == GTFO_CHANNEL)
         {
             key owner = llGetOwner();
+            string ownerName = llKey2Name(owner);
 
             // Get HUD’s group UUID
             list details = llGetObjectDetails(llGetKey(), [OBJECT_GROUP]);
@@ -36,13 +38,13 @@ default
             }
 
             // Parse GTFO message
-            // Examples:
-            // "Trin Morningstar picked up 44 SuperChewy Candy"
-            // "Trin Morningstar unloaded 44 Fuel Cells (Aether)"
             list parts = llParseString2List(message, [" "], []);
             if (llGetListLength(parts) < 5) return; // sanity check
 
             string driver = llList2String(parts, 0) + " " + llList2String(parts, 1);
+
+            // ✅ Only log if the message driver matches this HUD’s owner
+            if (driver != ownerName) return;
 
             string action;
             string cargoCount;
