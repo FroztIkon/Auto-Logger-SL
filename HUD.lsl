@@ -1,84 +1,97 @@
 // Replace with your fleet group UUID
 key FLEET_GROUP = "xxxxx-xxxxxxx-xxxxxxx-xxxxxx";  
 string SERVER_URL = "https://yourserver.com/fleetlog.php"; // replace with your endpoint
-integer HUD_CHANNEL = -9000; // private channel for text box input
-// Define channels
-integer JOB_CHANNEL = -9001;       // channel for job input
-integer DEST_CHANNEL = -9002;      // channel for destination input
-
-string driverJob = "";
-string driverDestination = "";
+integer GTFO_CHANNEL = -9600; // GTFO HUD speaks here
 
 default
 {
     state_entry()
     {
-        // Register listeners for both channels
-        llListen(JOB_CHANNEL, "", llGetOwner(), "");
-        llListen(DEST_CHANNEL, "", llGetOwner(), "");
-    }
-
-    attach(key id)
-    {
-        if (id != NULL_KEY)
-        {
-            // Re-register listeners when HUD is attached
-            llListen(JOB_CHANNEL, "", llGetOwner(), "");
-            llListen(DEST_CHANNEL, "", llGetOwner(), "");
-        }
-    }
-
-    touch_start(integer total_number)
-    {
-        key owner = llGetOwner();
-
-        // Group restriction check
-        if (!llSameGroup(owner))
-        {
-            llOwnerSay("Wrong group. Please activate the fleet group.");
-            return;
-        }
-
-        // First prompt: ask for job
-        llTextBox(owner, "Enter job type (e.g. 'Container Delivery')", JOB_CHANNEL);
+        // Listen for GTFO freight messages
+        llListen(GTFO_CHANNEL, "", NULL_KEY, "");
     }
 
     listen(integer channel, string name, key id, string message)
     {
-        if (id != llGetOwner()) return;
-
-        if (channel == JOB_CHANNEL)
+        if (channel == GTFO_CHANNEL)
         {
-            driverJob = llStringTrim(message, STRING_TRIM);
-            llOwnerSay("Job recorded: " + driverJob);
-
-            // Prompt for destination next
-            llTextBox(llGetOwner(), "Enter destination (e.g. 'Port Alpha')", DEST_CHANNEL);
-        }
-        else if (channel == DEST_CHANNEL)
-        {
-            driverDestination = llStringTrim(message, STRING_TRIM);
-            llOwnerSay("Destination recorded: " + driverDestination);
-
-            // Now send both job and destination to server
             key owner = llGetOwner();
-            string driver = llKey2Name(owner);
+
+            // Get HUD’s group UUID
+            list details = llGetObjectDetails(llGetKey(), [OBJECT_GROUP]);
+            key hudGroup = llList2Key(details, 0);
+
+            // Check HUD is set to Fleet group
+            if (hudGroup != FLEET_GROUP)
+            {
+                llOwnerSay("This HUD is not set to the Fleet group.");
+                return;
+            }
+
+            // Check driver’s active group matches HUD’s group
+            if (!llSameGroup(owner))
+            {
+                llOwnerSay("Access denied. Please activate the Fleet group.");
+                return;
+            }
+
+            // Parse GTFO message
+            // Examples:
+            // "Trin Morningstar picked up 44 SuperChewy Candy"
+            // "Trin Morningstar unloaded 44 Fuel Cells (Aether)"
+            list parts = llParseString2List(message, [" "], []);
+            if (llGetListLength(parts) < 5) return; // sanity check
+
+            string driver = llList2String(parts, 0) + " " + llList2String(parts, 1);
+
+            string action;
+            string cargoCount;
+            string cargoType;
+
+            if (llList2String(parts, 2) == "picked" && llList2String(parts, 3) == "up")
+            {
+                action = "picked up";
+                cargoCount = llList2String(parts, 4);
+                cargoType = llDumpList2String(llList2List(parts, 5, -1), " ");
+            }
+            else if (llList2String(parts, 2) == "unloaded")
+            {
+                action = "unloaded";
+                cargoCount = llList2String(parts, 3);
+                cargoType = llDumpList2String(llList2List(parts, 4, -1), " ");
+            }
+            else
+            {
+                action = llList2String(parts, 2); // fallback
+                cargoCount = "";
+                cargoType = llDumpList2String(llList2List(parts, 3, -1), " ");
+            }
+
             vector pos = llGetPos();
-        
-            string region = llGetRegionName(); // ✅ region name
+            string region = llGetRegionName();
 
+            // Build SLURL
+            string slurl = "http://maps.secondlife.com/secondlife/"
+                         + llEscapeURL(region) + "/"
+                         + (string)((integer)pos.x) + "/"
+                         + (string)((integer)pos.y) + "/"
+                         + (string)((integer)pos.z);
+
+            // Build payload
             string payload = "driver=" + llEscapeURL(driver)
-                           + "&job=" + llEscapeURL(driverJob)
-                           + "&destination=" + llEscapeURL(driverDestination)
-                           + "&location=" + llEscapeURL((string)pos)
-                           + "&region=" + llEscapeURL(region);
+                           + "&action=" + llEscapeURL(action)
+                           + "&amount=" + llEscapeURL(cargoCount)
+                           + "&cargo=" + llEscapeURL(cargoType)
+                           + "&slurl=" + llEscapeURL(slurl);
 
+            // Send to server
             llHTTPRequest(SERVER_URL,
                 [HTTP_METHOD, "POST", HTTP_MIMETYPE, "application/x-www-form-urlencoded"],
                 payload);
 
-            llOwnerSay("Job reported: " + driverJob + " → " + driverDestination
-                       + " @ " + region + " " + (string)pos);
+            // Feedback in-world
+            llOwnerSay("Logged: " + driver + " " + action + " " + cargoCount + " " + cargoType
+                       + " @ " + slurl);
         }
     }
 }
