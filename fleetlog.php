@@ -1,40 +1,26 @@
 <?php
-$logFile = "fleetlog.txt";
+// Database connection settings
+require 'config.php'; // pulls in $pdo
 
-$driver = $_POST['driver'] ?? 'Unknown';
-$action = $_POST['action'] ?? 'None';
-$amount = $_POST['amount'] ?? '0';
-$cargo = $_POST['cargo'] ?? 'None';
-$slurl = $_POST['slurl'] ?? 'Unknown';
-
-$entry = date("Y-m-d H:i:s")
-       . " | Driver: $driver"
-       . " | Action: $action"
-       . " | Amount: $amount"
-       . " | Cargo: $cargo"
-       . " | SLURL: $slurl\n";
-
-file_put_contents($logFile, $entry, FILE_APPEND);
-
-echo "Logged: $entry";
-?>
-<?php
-// fleetlog.php
-$logFile = "fleetlog.txt";
 
 // Collect POST data
 $driver = $_POST['driver'] ?? 'Unknown';
-$job = $_POST['job'] ?? 'None';
-$destination = $_POST['destination'] ?? 'None';
-$location = $_POST['location'] ?? 'Unknown';
-$region = $_POST['region'] ?? 'Unknown';
+$action = $_POST['action'] ?? 'None';
+$amount = $_POST['amount'] ?? '0';
+$cargo  = $_POST['cargo'] ?? 'None';
+$slurl  = $_POST['slurl'] ?? 'Unknown';
 
-// Build log entry
-$entry = date("Y-m-d H:i:s") . " | Driver: $driver | Job: $job | Destination: $destination | Location: $location | Region: $region\n";
+// Insert into database
+$sql = "INSERT INTO fleet_events (timestamp, driver, action, amount, cargo, slurl) 
+        VALUES (NOW(), :driver, :action, :amount, :cargo, :slurl)";
+$stmt = $pdo->prepare($sql);
+$stmt->execute([
+    ':driver' => $driver,
+    ':action' => $action,
+    ':amount' => $amount,
+    ':cargo'  => $cargo,
+    ':slurl'  => $slurl
+]);
 
-// Append to log file
-file_put_contents($logFile, $entry, FILE_APPEND);
-
-// Confirmation back to SL
-echo "Logged: $entry";
+echo "Logged successfully.";
 ?>
