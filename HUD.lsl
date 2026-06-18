@@ -3,7 +3,6 @@ key FLEET_GROUP = "xxxxx-xxxxxxx-xxxxxxx-xxxxxx";
 string SERVER_URL = "https://yourserver.com/fleetlog.php"; // replace with your endpoint
 
 integer GTFO_CHANNEL = -9600; // GTFO HUD speaks here
-
 default
 {
     state_entry()
