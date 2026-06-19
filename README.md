@@ -1,7 +1,8 @@
 # Auto-Logger-SL
 This is meant as a GTFO logger that reports to a endpoint server. Drivers used to have to input the Destination and the Cargo. Now we're listening for GTFO hud announcements and using them as a trigger to send the data. It outputs into a table:  
 Timestamp	Driver	Action	Amount	Cargo	Current Location. Current Location is a SLURL to go to that point.  
-The Fetch_hub.php is set to scan the GTFO website's Hubs page. It will replace the data it saves to a file called hub_data.json. The index page has be refactored to show which Hub has been picked up/dropped off instead of a SLURL, since a SLURL doesn't identify the actual HUB. Also further refinement was needed to ensure that it was looking at the region, instead of just coordinates. Duplicates could happen if tracking by coordinates. My suggestion is to create a cronjob that will parse fetch_hubs.php once a week. Any day but Sunday, since that is the GTFO maintenance and update day.  
+The Fetch_hub.php is set to scan the GTFO website's Hubs page. It will replace the data it saves to a file called hub_data.json.   
+The index page has be refactored to show which Hub has been picked up/dropped off instead of a SLURL, since a SLURL doesn't identify the actual HUB. Also further refinement was needed to ensure that it was looking at the region, instead of just coordinates. Duplicates could happen if tracking by coordinates. My suggestion is to create a cronjob that will parse fetch_hubs.php once a week. Any day but Sunday, since that is the GTFO maintenance and update day.  
 
   Example of Coordinate doublings
   ```
