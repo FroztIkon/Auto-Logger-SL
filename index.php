@@ -1,6 +1,13 @@
 <?php
 require 'config.php'; // pulls in $pdo
 
+// Load hub data JSON
+$hubDataRaw = json_decode(file_get_contents('hub_data.json'), true);
+$hubLookup = [];
+foreach ($hubDataRaw as $entry) {
+    $hubLookup[$entry['region']] = $entry['hub_name'];
+}
+
 // Top 10 Drivers
 $sqlDrivers = "SELECT driver, COUNT(*) AS trips 
                FROM fleet_events 
@@ -9,23 +16,23 @@ $sqlDrivers = "SELECT driver, COUNT(*) AS trips
                LIMIT 10";
 $drivers = $pdo->query($sqlDrivers)->fetchAll(PDO::FETCH_ASSOC);
 
-// Top 10 Regions (extract region from SLURL)
-$sqlRegions = "SELECT 
-                  SUBSTRING_INDEX(SUBSTRING_INDEX(slurl, '/', 5), '/', -1) AS region,
-                  COUNT(*) AS visits
-               FROM fleet_events
-               GROUP BY region
-               ORDER BY visits DESC
-               LIMIT 10";
-$regions = $pdo->query($sqlRegions)->fetchAll(PDO::FETCH_ASSOC);
-
-// Top 10 Cargo Types
-$sqlCargo = "SELECT cargo, COUNT(*) AS moves 
+// Top 10 Cargo
+$sqlCargo = "SELECT cargo, COUNT(*) AS loads 
              FROM fleet_events 
              GROUP BY cargo 
-             ORDER BY moves DESC 
+             ORDER BY loads DESC 
              LIMIT 10";
 $cargo = $pdo->query($sqlCargo)->fetchAll(PDO::FETCH_ASSOC);
+
+// Top 10 Regions (to be mapped to hubs)
+$sqlRegions = "SELECT 
+    SUBSTRING_INDEX(SUBSTRING_INDEX(slurl, '/', 5), '/', -1) AS region,
+    COUNT(*) AS visits
+FROM fleet_events
+GROUP BY region
+ORDER BY visits DESC
+LIMIT 10";
+$regions = $pdo->query($sqlRegions)->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -40,10 +47,6 @@ $cargo = $pdo->query($sqlCargo)->fetchAll(PDO::FETCH_ASSOC);
         padding: 20px;
         color: #333;
     }
-    h1 {
-        text-align: center;
-        color: #2c3e50;
-    }
     h2 {
         margin-top: 0;
         color: #2c3e50;
@@ -51,16 +54,17 @@ $cargo = $pdo->query($sqlCargo)->fetchAll(PDO::FETCH_ASSOC);
         padding-bottom: 5px;
     }
     .dashboard {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 30px;
-        margin-top: 30px;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
     }
     .card {
         background: #fff;
-        padding: 20px;
         border-radius: 8px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 20px;
+        flex: 1;
+        min-width: 300px;
     }
     table {
         width: 100%;
@@ -68,25 +72,21 @@ $cargo = $pdo->query($sqlCargo)->fetchAll(PDO::FETCH_ASSOC);
         margin-top: 10px;
     }
     th, td {
-        padding: 10px;
+        padding: 8px;
         text-align: left;
+        border-bottom: 1px solid #ddd;
     }
     th {
         background: #3498db;
         color: #fff;
     }
-    tr:nth-child(even) {
-        background: #f9f9f9;
-    }
-    tr:hover {
-        background: #eaf2f8;
-    }
 </style>
 </head>
 <body>
-
-<h1>Fleet Leaderboard</h1>
+<h1>Fleet Dashboard</h1>
 <div class="dashboard">
+
+    <!-- Top Drivers -->
     <div class="card">
         <h2>Top 10 Drivers</h2>
         <table>
@@ -100,32 +100,37 @@ $cargo = $pdo->query($sqlCargo)->fetchAll(PDO::FETCH_ASSOC);
         </table>
     </div>
 
+    <!-- Top Cargo -->
     <div class="card">
-        <h2>Top 10 Regions</h2>
+        <h2>Top 10 Cargo</h2>
         <table>
-            <tr><th>Region</th><th>Visits</th></tr>
-            <?php foreach ($regions as $row): ?>
+            <tr><th>Cargo</th><th>Loads</th></tr>
+            <?php foreach ($cargo as $row): ?>
                 <tr>
-                    <td><?= htmlspecialchars($row['region']) ?></td>
+                    <td><?= htmlspecialchars($row['cargo']) ?></td>
+                    <td><?= $row['loads'] ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </table>
+    </div>
+
+    <!-- Top Hubs -->
+    <div class="card">
+        <h2>Top 10 Hubs</h2>
+        <table>
+            <tr><th>Hub</th><th>Visits</th></tr>
+            <?php foreach ($regions as $row): 
+                $region = $row['region'];
+                $hubName = $hubLookup[$region] ?? $region;
+            ?>
+                <tr>
+                    <td><?= htmlspecialchars($hubName) ?></td>
                     <td><?= $row['visits'] ?></td>
                 </tr>
             <?php endforeach; ?>
         </table>
     </div>
 
-    <div class="card">
-        <h2>Top 10 Cargo</h2>
-        <table>
-            <tr><th>Cargo</th><th>Moves</th></tr>
-            <?php foreach ($cargo as $row): ?>
-                <tr>
-                    <td><?= htmlspecialchars($row['cargo']) ?></td>
-                    <td><?= $row['moves'] ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </table>
-    </div>
 </div>
-
 </body>
 </html>
